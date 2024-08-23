@@ -24,11 +24,10 @@
 #include "mik32_hal_timer16.h"
 /* ----------------------- Modbus includes ----------------------------------*/
 #include "mb.h"
-#include "mbport.h"
 
 /* ----------------------- static functions ---------------------------------*/
 static void prvvTIMERExpiredISR(void);
-extern TIMER32_HandleTypeDef htimer16_0;
+extern Timer16_HandleTypeDef htimer16_0;
 uint16_t timeout = 0;
 volatile uint16_t counter = 0;
 
@@ -47,7 +46,7 @@ void vMBPortTimersEnable()
 
 void vMBPortTimersDisable()
 {
-    HAL_Timer16_Channel_Disable(&htimer16_channel0);
+    HAL_Timer16_Disable(&htimer16_0);
 }
 
 void prvvTIMERExpiredISR(void)
@@ -55,7 +54,7 @@ void prvvTIMERExpiredISR(void)
     (void) pxMBPortCBTimerExpired();
 }
 
-void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
+void HAL_TIM_PeriodElapsedCallback(Timer16_HandleTypeDef *htimer16_0)
 {
     if((++counter) >= timeout)
     {

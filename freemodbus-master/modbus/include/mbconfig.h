@@ -45,8 +45,6 @@ PR_BEGIN_EXTERN_C
  * All of these settings are available in the file <code>mbconfig.h</code>
  */
 
-#include <rtconfig.h>
-
 /*! \addtogroup modbus_cfg
  *  @{
  */

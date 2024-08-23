@@ -20,156 +20,109 @@
  */
 
 #include "port.h"
-
+#include "mik32_hal_usart.h"
 /* ----------------------- Modbus includes ----------------------------------*/
 #include "mb.h"
 #include "mbport.h"
 
 /* ----------------------- Static variables ---------------------------------*/
-/* software simulation serial transmit IRQ handler thread stack */
-#ifdef rt_align
-rt_align(RT_ALIGN_SIZE)
-#else
-ALIGN(RT_ALIGN_SIZE)
-#endif
-static rt_uint8_t serial_soft_trans_irq_stack[512];
-/* software simulation serial transmit IRQ handler thread */
-static struct rt_thread thread_serial_soft_trans_irq;
-/* serial event */
-static struct rt_event event_serial;
-/* modbus slave serial device */
-static struct rt_serial_device *serial;
-
-/* ----------------------- Defines ------------------------------------------*/
-/* serial transmit event */
-#define EVENT_SERIAL_TRANS_START    (1<<0)
+USART_HandleTypeDef husart0;
 
 /* ----------------------- static functions ---------------------------------*/
 static void prvvUARTTxReadyISR(void);
 static void prvvUARTRxISR(void);
-static rt_err_t serial_rx_ind(rt_device_t dev, rt_size_t size);
-static void serial_soft_trans_irq(void* parameter);
 
 /* ----------------------- Start implementation -----------------------------*/
 BOOL xMBPortSerialInit(UCHAR ucPORT, ULONG ulBaudRate, UCHAR ucDataBits,
         eMBParity eParity)
 {
-    rt_device_t dev = RT_NULL;
-    char uart_name[20];
-    /**
-     * set 485 mode receive and transmit control IO
-     * @note MODBUS_SLAVE_RT_CONTROL_PIN_INDEX need be defined by user
-     */
-#if defined(RT_MODBUS_SLAVE_USE_CONTROL_PIN)
-    rt_pin_mode(MODBUS_SLAVE_RT_CONTROL_PIN_INDEX, PIN_MODE_OUTPUT);
-#endif
-    /* set serial name */
-    rt_snprintf(uart_name,sizeof(uart_name), "uart%d", ucPORT);
-
-    dev = rt_device_find(uart_name);
-    if(dev == RT_NULL)
-    {
-        /* can not find uart */
-        return FALSE;
-    }
-    else
-    {
-        serial = (struct rt_serial_device*)dev;
+    // set serial configure parameter 
+    switch (ucPORT) {
+    case 0:
+        husart0.Instance = UART_0;
+        break;
+    case 1:
+        husart0.Instance = UART_1;
+        break;
     }
 
-    /* set serial configure parameter */
-    serial->config.baud_rate = ulBaudRate;
-    serial->config.stop_bits = STOP_BITS_1;
+    husart0.transmitting = Enable;
+    husart0.receiving = Enable;
+
+    husart0.Interrupt.ctsie = Disable;
+    husart0.Interrupt.eie = Disable;
+    husart0.Interrupt.idleie = Disable;
+    husart0.Interrupt.lbdie = Disable;
+    husart0.Interrupt.peie = Disable;
+    husart0.Interrupt.rxneie = Disable;
+    husart0.Interrupt.tcie = Disable;
+    husart0.Interrupt.txeie = Disable;
+
+    // скорость   
+    husart0.baudrate = ulBaudRate;
+
+    // размер слова
+    switch (ucDataBits) {
+    case 8:
+        husart0.frame = Frame_8bit;
+        break;
+    case 9:
+        husart0.frame = Frame_9bit;
+        break;
+    }
+
     switch(eParity){
-    case MB_PAR_NONE: {
-        serial->config.data_bits = DATA_BITS_8;
-        serial->config.parity = PARITY_NONE;
+    case MB_PAR_NONE: 
+        husart0.parity_bit = Disable;
+        husart0.parity_bit_inversion = Disable;
+        break;
+    case MB_PAR_ODD: 
+        husart0.parity_bit = Enable;
+        husart0.parity_bit_inversion = Disable;
+        break;
+    case MB_PAR_EVEN: 
+        husart0.parity_bit = Enable;
+        husart0.parity_bit_inversion = Enable;
         break;
     }
-    case MB_PAR_ODD: {
-        serial->config.data_bits = DATA_BITS_9;
-        serial->config.parity = PARITY_ODD;
-        break;
-    }
-    case MB_PAR_EVEN: {
-        serial->config.data_bits = DATA_BITS_9;
-        serial->config.parity = PARITY_EVEN;
-        break;
-    }
-    }
-    /* set serial configure */
-    serial->ops->configure(serial, &(serial->config));
-
-    /* open serial device */
-    if (!rt_device_open(&serial->parent, RT_DEVICE_OFLAG_RDWR | RT_DEVICE_FLAG_INT_RX)) {
-        rt_device_set_rx_indicate(&serial->parent, serial_rx_ind);
-    } else {
-        return FALSE;
-    }
-
-    /* software initialize */
-    rt_event_init(&event_serial, "slave event", RT_IPC_FLAG_PRIO);
-    rt_thread_init(&thread_serial_soft_trans_irq,
-                   "slave trans",
-                   serial_soft_trans_irq,
-                   RT_NULL,
-                   serial_soft_trans_irq_stack,
-                   sizeof(serial_soft_trans_irq_stack),
-                   10, 5);
-    rt_thread_startup(&thread_serial_soft_trans_irq);
+    HAL_USART_Init(&husart0);   
 
     return TRUE;
 }
 
 void vMBPortSerialEnable(BOOL xRxEnable, BOOL xTxEnable)
 {
-    rt_uint32_t recved_event;
     if (xRxEnable)
     {
         /* enable RX interrupt */
-        serial->ops->control(serial, RT_DEVICE_CTRL_SET_INT, (void *)RT_DEVICE_FLAG_INT_RX);
-        /* switch 485 to receive mode */
-#if defined(RT_MODBUS_SLAVE_USE_CONTROL_PIN)
-        rt_pin_write(MODBUS_SLAVE_RT_CONTROL_PIN_INDEX, PIN_LOW);
-#endif
+        HAL_USART_RXNE_EnableInterrupt(&husart0);
     }
     else
     {
-        /* switch 485 to transmit mode */
-#if defined(RT_MODBUS_SLAVE_USE_CONTROL_PIN)
-        rt_pin_write(MODBUS_SLAVE_RT_CONTROL_PIN_INDEX, PIN_HIGH);
-#endif
         /* disable RX interrupt */
-        serial->ops->control(serial, RT_DEVICE_CTRL_CLR_INT, (void *)RT_DEVICE_FLAG_INT_RX);
+        HAL_USART_RXNE_DisableInterrupt(&husart0);
     }
     if (xTxEnable)
     {
         /* start serial transmit */
-        rt_event_send(&event_serial, EVENT_SERIAL_TRANS_START);
+        HAL_USART_TXE_EnableInterrupt(&husart0);
     }
     else
     {
         /* stop serial transmit */
-        rt_event_recv(&event_serial, EVENT_SERIAL_TRANS_START,
-                RT_EVENT_FLAG_OR | RT_EVENT_FLAG_CLEAR, 0,
-                &recved_event);
+        HAL_USART_TXE_DisableInterrupt(&husart0);
     }
-}
-
-void vMBPortClose(void)
-{
-    serial->parent.close(&(serial->parent));
 }
 
 BOOL xMBPortSerialPutByte(CHAR ucByte)
 {
-    serial->parent.write(&(serial->parent), 0, &ucByte, 1);
+    husart0.Instance->TXDATA = ucByte;
     return TRUE;
 }
 
 BOOL xMBPortSerialGetByte(CHAR * pucByte)
 {
-    serial->parent.read(&(serial->parent), 0, pucByte, 1);
+    *pucByte = husart0.Instance->RXDATA;
     return TRUE;
 }
 
@@ -196,33 +149,38 @@ void prvvUARTRxISR(void)
     pxMBFrameCBByteReceived();
 }
 
-/**
- * Software simulation serial transmit IRQ handler.
- *
- * @param parameter parameter
- */
-static void serial_soft_trans_irq(void* parameter) {
-    rt_uint32_t recved_event;
-    while (1)
-    {
-        /* waiting for serial transmit start */
-        rt_event_recv(&event_serial, EVENT_SERIAL_TRANS_START, RT_EVENT_FLAG_OR,
-                RT_WAITING_FOREVER, &recved_event);
-        /* execute modbus callback */
-        prvvUARTTxReadyISR();
-    }
+void DINAR_UART_IRQHandler(USART_HandleTypeDef *husart)
+{
+  uint32_t tmp_flag = 0, tmp_it_source = 0;
+
+  tmp_flag = HAL_USART_RXNE_ReadFlag(husart);
+  tmp_it_source = (husart->Instance->CONTROL1 & (1<<5));
+  /* UART in mode Receiver ---------------------------------------------------*/
+  if((tmp_flag != 1) && (tmp_it_source != 1))
+  { 
+    prvvUARTRxISR(  ); 
+  }
+  
+  tmp_flag = HAL_USART_TXE_ReadFlag(husart);
+  tmp_it_source = (husart->Instance->CONTROL1 & (1<<7));
+  /* UART in mode Transmitter ------------------------------------------------*/
+  if((tmp_flag != 1) && (tmp_it_source != 1))
+  {
+    prvvUARTTxReadyISR(  );
+  } 
 }
 
-/**
- * This function is serial receive callback function
- *
- * @param dev the device of serial
- * @param size the data size that receive
- *
- * @return return RT_EOK
- */
-static rt_err_t serial_rx_ind(rt_device_t dev, rt_size_t size) {
-    while(size--)
-        prvvUARTRxISR();
-    return RT_EOK;
+void USART1_IRQHandler(void)
+{
+  DINAR_UART_IRQHandler(&husart0);
+}
+
+void USART2_IRQHandler(void)
+{
+  DINAR_UART_IRQHandler(&husart0);
+}
+
+void USART3_IRQHandler(void)
+{
+  DINAR_UART_IRQHandler(&husart0);
 }
