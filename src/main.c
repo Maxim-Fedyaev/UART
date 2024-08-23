@@ -2,31 +2,44 @@
 #include "mik32_hal_timer16.h"
 #include "port.h"
 #include "mbport.h"
+#include "mb.h"
+#include "user_mb_app.h"
 
 Timer16_HandleTypeDef htimer16_0;
+extern USART_HandleTypeDef husart0;
 
 void SystemClock_Config(void);
 void Timer16_0_Init(void);
+extern void UART_1_IRQHandler(USART_HandleTypeDef *husart);
+
+static USHORT usRegInputStart = 1000;
+static USHORT usRegInputBufp[4];
+
+extern unsigned long __TEXT_START__; //это "метка" для обработчика прерываний?!
+void trap_handler(void) //сам обработчик всех прерываний
+{
+  UART_1_IRQHandler(&husart0);
+}
 
 int main()
 {
+    write_csr(mtvec, &__TEXT_START__); //это настраивает вектор прерываний?!
     SystemClock_Config();
 
-    Timer16_0_Init();     
+    Timer16_0_Init(); 
 
-if(xMBPortSerialInit(0, 38400, 8, MB_PAR_NONE) == FALSE)
-{
+    __HAL_PCC_EPIC_CLK_ENABLE();
+    HAL_EPIC_MaskEdgeSet(HAL_EPIC_UART_1_MASK); 
+    HAL_IRQ_EnableInterrupts();
 
-}
-else
-{
-    vMBPortSerialEnable(TRUE, FALSE);
-    while (1)
-    {}   
-}
+    eMBErrorCode eStatus;
+    eStatus = eMBInit(MB_RTU, 0x11, 0, 3840, MB_PAR_NONE);
+    eStatus = eMBEnable();
+
     while (1)
     {
-        
+       (void) eMBPoll();
+       usRegInputBuf[0]++; 
     }
 }
 

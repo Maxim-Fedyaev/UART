@@ -21,6 +21,8 @@
 
 #include "port.h"
 #include "mik32_hal_usart.h"
+#include "mik32_hal_irq.h"
+
 /* ----------------------- Modbus includes ----------------------------------*/
 #include "mb.h"
 #include "mbport.h"
@@ -40,9 +42,11 @@ BOOL xMBPortSerialInit(UCHAR ucPORT, ULONG ulBaudRate, UCHAR ucDataBits,
     switch (ucPORT) {
     case 0:
         husart0.Instance = UART_0;
+        __HAL_PCC_UART_0_CLK_ENABLE();        
         break;
     case 1:
         husart0.Instance = UART_1;
+        __HAL_PCC_UART_1_CLK_ENABLE();        
         break;
     }
 
@@ -149,38 +153,24 @@ void prvvUARTRxISR(void)
     pxMBFrameCBByteReceived();
 }
 
-void DINAR_UART_IRQHandler(USART_HandleTypeDef *husart)
+void UART_1_IRQHandler(USART_HandleTypeDef *husart)
 {
-  uint32_t tmp_flag = 0, tmp_it_source = 0;
+    EPIC->CLEAR |= HAL_EPIC_UART_1_MASK;
+        uint32_t tmp_flag = 0, tmp_it_source = 0;
 
-  tmp_flag = HAL_USART_RXNE_ReadFlag(husart);
-  tmp_it_source = (husart->Instance->CONTROL1 & (1<<5));
-  /* UART in mode Receiver ---------------------------------------------------*/
-  if((tmp_flag != 1) && (tmp_it_source != 1))
-  { 
-    prvvUARTRxISR(  ); 
-  }
+        tmp_flag = HAL_USART_RXNE_ReadFlag(husart);
+        tmp_it_source = (husart->Instance->CONTROL1 & (1<<5));
+        /* UART in mode Receiver ---------------------------------------------------*/
+        if((tmp_flag != 1) && (tmp_it_source != 1))
+        { 
+            prvvUARTRxISR(  ); 
+        }
   
-  tmp_flag = HAL_USART_TXE_ReadFlag(husart);
-  tmp_it_source = (husart->Instance->CONTROL1 & (1<<7));
-  /* UART in mode Transmitter ------------------------------------------------*/
-  if((tmp_flag != 1) && (tmp_it_source != 1))
-  {
-    prvvUARTTxReadyISR(  );
-  } 
-}
-
-void USART1_IRQHandler(void)
-{
-  DINAR_UART_IRQHandler(&husart0);
-}
-
-void USART2_IRQHandler(void)
-{
-  DINAR_UART_IRQHandler(&husart0);
-}
-
-void USART3_IRQHandler(void)
-{
-  DINAR_UART_IRQHandler(&husart0);
+        tmp_flag = HAL_USART_TXE_ReadFlag(husart);
+        tmp_it_source = (husart->Instance->CONTROL1 & (1<<7));
+        /* UART in mode Transmitter ------------------------------------------------*/
+        if((tmp_flag != 1) && (tmp_it_source != 1))
+        {
+            prvvUARTTxReadyISR(  );
+        }
 }

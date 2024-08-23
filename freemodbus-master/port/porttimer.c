@@ -41,7 +41,7 @@ BOOL xMBPortTimersInit(USHORT usTim1Timerout50us)
 void vMBPortTimersEnable()
 {
     counter = 0;
-    HAL_Timer16_Counter_Start(&htimer16_0, 1600);
+    HAL_Timer16_Counter_Start(&htimer16_0, 320);
 }
 
 void vMBPortTimersDisable()
