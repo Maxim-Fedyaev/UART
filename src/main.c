@@ -4,21 +4,25 @@
 #include "mbport.h"
 #include "mb.h"
 #include "user_mb_app.h"
+#include "mik32_hal_gpio.h"
 
-Timer16_HandleTypeDef htimer16_0;
 extern USART_HandleTypeDef husart0;
-
+extern Timer16_HandleTypeDef htimer16_0;
 void SystemClock_Config(void);
-void Timer16_0_Init(void);
+extern void Timer16_0_IRQHandler(Timer16_HandleTypeDef *htimer16);
 extern void UART_1_IRQHandler(USART_HandleTypeDef *husart);
-
+extern void Timer16_0_Init(void);
+void GPIO_Init();
 static USHORT usRegInputStart = S_REG_INPUT_START;
 static USHORT usRegInputBuf[S_REG_INPUT_NREGS];
 
 extern unsigned long __TEXT_START__; //это "метка" для обработчика прерываний?!
 void trap_handler(void) //сам обработчик всех прерываний
 {
-  UART_1_IRQHandler(&husart0);
+    if(TIMER16_0->ISR & 2)
+        Timer16_0_IRQHandler(&htimer16_0);
+    if(UART_1->FLAGS & 0xA0)
+        UART_1_IRQHandler(&husart0);
 }
 
 int main()
@@ -28,18 +32,23 @@ int main()
 
     Timer16_0_Init(); 
 
+    GPIO_Init();
+
     __HAL_PCC_EPIC_CLK_ENABLE();
-    HAL_EPIC_MaskEdgeSet(HAL_EPIC_UART_1_MASK); 
+    HAL_EPIC_MaskEdgeSet(HAL_EPIC_UART_1_MASK | HAL_EPIC_TIMER16_0_MASK); 
     HAL_IRQ_EnableInterrupts();
 
-    eMBErrorCode eStatus;
-    eStatus = eMBInit(MB_RTU, 0x11, 0, 3840, MB_PAR_NONE);
-    eStatus = eMBEnable();
+    HAL_DelayMs(2000);
+    xMBPortTimersInit(20000);
+    vMBPortTimersEnable();
+    //eMBErrorCode eStatus;
+    //eStatus = eMBInit(MB_RTU, 0x11, 1, 38400, MB_PAR_NONE);
+   // eStatus = eMBEnable();
 
     while (1)
     {
-       (void) eMBPoll();
-       usRegInputBuf[0]++; 
+       //(void) eMBPoll();
+      // usRegInputBuf[0]++; 
     }
 }
 
@@ -61,25 +70,17 @@ void SystemClock_Config(void)
     HAL_PCC_Config(&PCC_OscInit);
 }
 
-void Timer16_0_Init(void)
+void GPIO_Init()
 {
-    htimer16_0.Instance = TIMER16_0;
+    GPIO_InitTypeDef GPIO_InitStruct = {0};
 
-    /* Настройка тактирования */
-    htimer16_0.Clock.Source = TIMER16_SOURCE_INTERNAL_SYSTEM;
-    htimer16_0.CountMode = TIMER16_COUNTMODE_INTERNAL; /* При тактировании от Input1 не имеет значения */
-    htimer16_0.Clock.Prescaler = TIMER16_PRESCALER_1;
-    htimer16_0.ActiveEdge = TIMER16_ACTIVEEDGE_RISING; /* Выбирается при тактировании от Input1 */
+    __HAL_PCC_GPIO_0_CLK_ENABLE();
+    __HAL_PCC_GPIO_1_CLK_ENABLE();
+    __HAL_PCC_GPIO_2_CLK_ENABLE();
+    __HAL_PCC_GPIO_IRQ_CLK_ENABLE();
 
-    /* Настройка режима обновления регистра ARR и CMP */
-    htimer16_0.Preload = TIMER16_PRELOAD_AFTERWRITE;
-
-    /* Настройки фильтра */
-    htimer16_0.Filter.ExternalClock = TIMER16_FILTER_NONE;
-    htimer16_0.Filter.Trigger = TIMER16_FILTER_NONE;
-
-    htimer16_0.Waveform.Enable = TIMER16_WAVEFORM_GENERATION_ENABLE;
-    htimer16_0.Waveform.Polarity = TIMER16_WAVEFORM_POLARITY_NONINVERTED;
-
-    HAL_Timer16_Init(&htimer16_0);
+    GPIO_InitStruct.Pin = GPIO_PIN_9;
+    GPIO_InitStruct.Mode = HAL_GPIO_MODE_GPIO_OUTPUT;
+    GPIO_InitStruct.Pull = HAL_GPIO_PULL_NONE;
+    HAL_GPIO_Init(GPIO_0, &GPIO_InitStruct);
 }

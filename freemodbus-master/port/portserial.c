@@ -156,21 +156,21 @@ void prvvUARTRxISR(void)
 void UART_1_IRQHandler(USART_HandleTypeDef *husart)
 {
     EPIC->CLEAR |= HAL_EPIC_UART_1_MASK;
-        uint32_t tmp_flag = 0, tmp_it_source = 0;
+    uint32_t tmp_flag = 0, tmp_it_source = 0;
 
-        tmp_flag = HAL_USART_RXNE_ReadFlag(husart);
-        tmp_it_source = (husart->Instance->CONTROL1 & (1<<5));
-        /* UART in mode Receiver ---------------------------------------------------*/
-        if((tmp_flag != 1) && (tmp_it_source != 1))
-        { 
-            prvvUARTRxISR(  ); 
-        }
+    tmp_flag = HAL_USART_RXNE_ReadFlag(husart);
+    tmp_it_source = (husart->Instance->CONTROL1 & (1<<5));
+    /* UART in mode Receiver ---------------------------------------------------*/
+    if((tmp_flag != 1) && (tmp_it_source != 1))
+    { 
+        prvvUARTRxISR(  ); 
+    }
   
-        tmp_flag = HAL_USART_TXE_ReadFlag(husart);
-        tmp_it_source = (husart->Instance->CONTROL1 & (1<<7));
-        /* UART in mode Transmitter ------------------------------------------------*/
-        if((tmp_flag != 1) && (tmp_it_source != 1))
-        {
-            prvvUARTTxReadyISR(  );
-        }
+    tmp_flag = HAL_USART_TXE_ReadFlag(husart);
+    tmp_it_source = (husart->Instance->CONTROL1 & (1<<7));
+    /* UART in mode Transmitter ------------------------------------------------*/
+    if((tmp_flag != 1) && (tmp_it_source != 1))
+    {
+        prvvUARTTxReadyISR(  );
+    }
 }

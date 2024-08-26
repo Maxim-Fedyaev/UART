@@ -23,12 +23,13 @@
 
 /* ----------------------- Modbus includes ----------------------------------*/
 #include "port.h"
+#include "mik32_hal_irq.h"
 /* ----------------------- Variables ----------------------------------------*/
 static uint32_t lock_nesting_count = 0;
 /* ----------------------- Start implementation -----------------------------*/
 void EnterCriticalSection(void)
 {
-    __disable_irq();
+    HAL_IRQ_DisableInterrupts();
     ++lock_nesting_count;
 }
 
@@ -37,7 +38,7 @@ void ExitCriticalSection(void)
     --lock_nesting_count;
     if (lock_nesting_count == 0)
     {
-        __enable_irq();
+        HAL_IRQ_EnableInterrupts();
     }
 }
 
