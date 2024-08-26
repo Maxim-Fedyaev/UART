@@ -28,9 +28,12 @@
  * File: $Id: mbconfig.h,v 1.14 2006/12/07 22:10:34 wolti Exp $
  *       $Id: mbconfig.h,v 1.60 2013/08/13 21:19:55 Armink Add Master Functions $
  */
+#define PKG_MODBUS_SLAVE_RTU
 
 #ifndef _MB_CONFIG_H
 #define _MB_CONFIG_H
+
+
 
 #ifdef __cplusplus
 PR_BEGIN_EXTERN_C

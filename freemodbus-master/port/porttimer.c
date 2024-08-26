@@ -27,9 +27,9 @@
 
 /* ----------------------- static functions ---------------------------------*/
 static void prvvTIMERExpiredISR(void);
-void Timer16_0_Init(void);
-void Timer16_0_IRQHandler(Timer16_HandleTypeDef *htimer16);
-Timer16_HandleTypeDef htimer16_0;
+void Timer16_1_Init(void);
+void Timer16_1_IRQHandler(void);
+extern Timer16_HandleTypeDef htimer16_1;
 uint16_t timeout = 0;
 volatile uint16_t counter = 0;
 
@@ -42,17 +42,15 @@ BOOL xMBPortTimersInit(USHORT usTim1Timerout50us)
 
 void vMBPortTimersEnable()
 {
-    HAL_GPIO_TogglePin(GPIO_0, GPIO_PIN_9);
+    HAL_GPIO_WritePin(GPIO_0, GPIO_PIN_10, 0);
     counter = 0;
-    HAL_Timer16_Enable(&htimer16_0);
-
-    HAL_Timer16_SetARR(&htimer16_0, 50000);
+    HAL_Timer16_Counter_Start(&htimer16_1, 1600);
 }
 
 void vMBPortTimersDisable()
 {
-    HAL_GPIO_TogglePin(GPIO_0, GPIO_PIN_9);
-    HAL_Timer16_Disable(&htimer16_0);
+    HAL_GPIO_WritePin(GPIO_0, GPIO_PIN_10, 1);
+    HAL_Timer16_Disable(&htimer16_1);
 }
 
 void prvvTIMERExpiredISR(void)
@@ -60,34 +58,12 @@ void prvvTIMERExpiredISR(void)
     (void) pxMBPortCBTimerExpired();
 }
 
-void Timer16_0_IRQHandler(Timer16_HandleTypeDef *htimer16_0)
+void Timer16_1_IRQHandler(void)
 {
-    EPIC->CLEAR |= HAL_EPIC_TIMER16_0_MASK;
+    EPIC->CLEAR |= HAL_EPIC_TIMER16_1_MASK;
+    TIMER16_1->ICR |= 2;
     if((++counter) >= timeout)
     {
         prvvTIMERExpiredISR();
     }
-}
-
-void Timer16_0_Init(void)
-{
-    htimer16_0.Instance = TIMER16_0;
-
-    /* Настройка тактирования */
-    htimer16_0.Clock.Source = TIMER16_SOURCE_INTERNAL_OSC32M;
-    htimer16_0.CountMode = TIMER16_COUNTMODE_INTERNAL; /* При тактировании от Input1 не имеет значения */
-    htimer16_0.Clock.Prescaler = TIMER16_PRESCALER_1;
-    htimer16_0.ActiveEdge = TIMER16_ACTIVEEDGE_RISING; /* Выбирается при тактировании от Input1 */
-
-    /* Настройка режима обновления регистра ARR и CMP */
-    htimer16_0.Preload = TIMER16_PRELOAD_AFTERWRITE;
-
-    /* Настройки фильтра */
-    htimer16_0.Filter.ExternalClock = TIMER16_FILTER_NONE;
-    htimer16_0.Filter.Trigger = TIMER16_FILTER_NONE;
-
-    htimer16_0.Waveform.Enable = TIMER16_WAVEFORM_GENERATION_ENABLE;
-    htimer16_0.Waveform.Polarity = TIMER16_WAVEFORM_POLARITY_NONINVERTED;
-
-    HAL_Timer16_Init(&htimer16_0);
 }
