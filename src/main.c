@@ -12,8 +12,8 @@ void SystemClock_Config(void);
 void Timer16_0_Init(void);
 extern void UART_1_IRQHandler(USART_HandleTypeDef *husart);
 
-static USHORT usRegInputStart = 1000;
-static USHORT usRegInputBufp[4];
+static USHORT usRegInputStart = S_REG_INPUT_START;
+static USHORT usRegInputBuf[S_REG_INPUT_NREGS];
 
 extern unsigned long __TEXT_START__; //это "метка" для обработчика прерываний?!
 void trap_handler(void) //сам обработчик всех прерываний
