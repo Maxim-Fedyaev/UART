@@ -27,29 +27,59 @@
 
 /* ----------------------- static functions ---------------------------------*/
 static void prvvTIMERExpiredISR(void);
-void Timer16_1_Init(void);
 void Timer16_1_IRQHandler(void);
-extern Timer16_HandleTypeDef htimer16_1;
+Timer16_HandleTypeDef htimer16_1;
 uint16_t timeout = 0;
 volatile uint16_t counter = 0;
 
 /* ----------------------- Start implementation -----------------------------*/
 BOOL xMBPortTimersInit(USHORT usTim1Timerout50us)
 {
-    timeout = usTim1Timerout50us;
+    htimer16_1.Instance = TIMER16_1;
+
+    /* Настройка тактирования */
+    htimer16_1.Clock.Source = TIMER16_SOURCE_INTERNAL_OSC32M;
+    htimer16_1.CountMode = TIMER16_COUNTMODE_INTERNAL; /* При тактировании от Input1 не имеет значения */
+    htimer16_1.Clock.Prescaler = TIMER16_PRESCALER_64;
+    htimer16_1.ActiveEdge = TIMER16_ACTIVEEDGE_RISING; /* Выбирается при тактировании от Input1 */
+
+    /* Настройка режима обновления регистра ARR и CMP */
+    htimer16_1.Preload = TIMER16_PRELOAD_AFTERWRITE;
+
+    /* Настройка триггера */
+    htimer16_1.Trigger.Source = TIMER16_TRIGGER_TIM1_GPIO1_9;
+    htimer16_1.Trigger.ActiveEdge = TIMER16_TRIGGER_ACTIVEEDGE_SOFTWARE; /* При использовании триггера значение должно быть отлично от software */
+    htimer16_1.Trigger.TimeOut = TIMER16_TIMEOUT_DISABLE;                /* Разрешить повторное срабатывание триггера */
+
+    /* Настройки фильтра */
+    htimer16_1.Filter.ExternalClock = TIMER16_FILTER_NONE;
+    htimer16_1.Filter.Trigger = TIMER16_FILTER_NONE;
+
+    /* Настройка режима энкодера */
+    htimer16_1.EncoderMode = TIMER16_ENCODER_ENABLE;
+
+    htimer16_1.Waveform.Enable = TIMER16_WAVEFORM_GENERATION_ENABLE;
+    htimer16_1.Waveform.Polarity = TIMER16_WAVEFORM_POLARITY_NONINVERTED;
+
+    HAL_Timer16_Init(&htimer16_1);
+
+    HAL_Timer16_Counter_Start(&htimer16_1, 25*usTim1Timerout50us);
+    HAL_Timer16_Disable(&htimer16_1);
+    
+    HAL_Timer16_SetInterruptARRM(&htimer16_1);
+
     return TRUE;
 }
 
 void vMBPortTimersEnable()
 {
-    HAL_GPIO_WritePin(GPIO_0, GPIO_PIN_10, 0);
-    counter = 0;
-    HAL_Timer16_Counter_Start(&htimer16_1, 1600);
+    HAL_Timer16_Enable(&htimer16_1);
+    
+    __HAL_TIMER16_START_CONTINUOUS(&htimer16_1);
 }
 
 void vMBPortTimersDisable()
 {
-    HAL_GPIO_WritePin(GPIO_0, GPIO_PIN_10, 1);
     HAL_Timer16_Disable(&htimer16_1);
 }
 
@@ -60,10 +90,6 @@ void prvvTIMERExpiredISR(void)
 
 void Timer16_1_IRQHandler(void)
 {
-    EPIC->CLEAR |= HAL_EPIC_TIMER16_1_MASK;
-    TIMER16_1->ICR |= 2;
-    if((++counter) >= timeout)
-    {
-        prvvTIMERExpiredISR();
-    }
+    prvvTIMERExpiredISR();
+    HAL_Timer16_ClearInterruptMask(&htimer16_1, 2);    
 }

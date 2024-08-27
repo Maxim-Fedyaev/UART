@@ -161,7 +161,7 @@ void UART_1_IRQHandler(USART_HandleTypeDef *husart)
     tmp_flag = HAL_USART_RXNE_ReadFlag(husart);
     tmp_it_source = (husart->Instance->CONTROL1 & (1<<5));
     /* UART in mode Receiver ---------------------------------------------------*/
-    if((tmp_flag != 1) && (tmp_it_source != 1))
+    if((tmp_flag = 1) && (tmp_it_source = 1))
     { 
         prvvUARTRxISR(  ); 
     }
@@ -169,7 +169,7 @@ void UART_1_IRQHandler(USART_HandleTypeDef *husart)
     tmp_flag = HAL_USART_TXE_ReadFlag(husart);
     tmp_it_source = (husart->Instance->CONTROL1 & (1<<7));
     /* UART in mode Transmitter ------------------------------------------------*/
-    if((tmp_flag != 1) && (tmp_it_source != 1))
+    if((tmp_flag = 1) && (tmp_it_source = 1))
     {
         prvvUARTTxReadyISR(  );
     }
