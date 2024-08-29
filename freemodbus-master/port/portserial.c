@@ -33,7 +33,7 @@
 USART_HandleTypeDef husart;
 extern TIMER32_HandleTypeDef htimer32;
 
-/* ----------------------- static functions ---------------------------------*/
+/* ----------------------- Static functions ---------------------------------*/
 static void prvvUARTTxReadyISR(void);
 static void prvvUARTRxISR(void);
 

@@ -10,9 +10,17 @@
 #include "mb.h"
 #include "user_mb_app.h"
 
-/* ----------------------- Declaration --------------------------------------*/
-extern USART_HandleTypeDef husart0;
-extern TIMER32_HandleTypeDef htimer32_0;
+/* -------------------------- Defines ---------------------------------------*/
+// Маска прерываний 
+#define UART_EPIC_MASK      HAL_EPIC_UART_1_MASK
+#define TIMER32_EPIC_MASK   HAL_EPIC_TIMER32_0_MASK
+
+// Настройки Modbus
+#define MB_SlaveAddress     0x11
+#define MB_BaudRate         38400
+#define MB_UART             1
+
+/* ------------------------ Fuction -----------------------------------------*/
 void SystemClock_Config(void);
 extern void UART_IRQHandler(void);
 extern void Timer32_IRQHandler(void);
@@ -20,15 +28,15 @@ extern void Timer32_IRQHandler(void);
 extern unsigned long __TEXT_START__; // это "метка" для обработчика прерываний
 volatile void trap_handler(void)     // сам обработчик всех прерываний
 {
-    if(HAL_EPIC_GetStatus() & HAL_EPIC_TIMER32_0_MASK)
+    if(HAL_EPIC_GetStatus() & TIMER32_EPIC_MASK)
     {
         Timer32_IRQHandler();
-        HAL_EPIC_Clear(HAL_EPIC_TIMER32_0_MASK);
+        HAL_EPIC_Clear(TIMER32_EPIC_MASK);
     }
-    if(HAL_EPIC_GetStatus() & HAL_EPIC_UART_1_MASK)
+    if(HAL_EPIC_GetStatus() & UART_EPIC_MASK)
     {
         UART_IRQHandler();
-        HAL_EPIC_Clear(HAL_EPIC_UART_1_MASK);
+        HAL_EPIC_Clear(UART_EPIC_MASK);
     }
 }
 
@@ -40,10 +48,10 @@ int main()
     SystemClock_Config();
 
     __HAL_PCC_EPIC_CLK_ENABLE();
-    HAL_EPIC_MaskEdgeSet(HAL_EPIC_UART_1_MASK | HAL_EPIC_TIMER32_0_MASK); 
+    HAL_EPIC_MaskEdgeSet(UART_EPIC_MASK | TIMER32_EPIC_MASK); 
     HAL_IRQ_EnableInterrupts();
 
-    eMBInit(MB_RTU, 0x11, 1, 38400, MB_PAR_NONE);
+    eMBInit(MB_RTU, MB_SlaveAddress, MB_UART, MB_BaudRate, MB_PAR_NONE);
     eMBEnable();
 
     while (1)
