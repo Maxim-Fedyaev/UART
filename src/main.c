@@ -9,7 +9,7 @@
 
 extern USART_HandleTypeDef husart0;
 void SystemClock_Config(void);
-extern void UART_1_IRQHandler(USART_HandleTypeDef *husart);
+extern void UART_1_IRQHandler(void);
 extern void Timer16_1_IRQHandler(void);
 
 //static USHORT usRegInputStart = S_REG_INPUT_START;
@@ -25,7 +25,7 @@ volatile void trap_handler(void) //сам обработчик всех прер
     }
     if(HAL_EPIC_GetStatus() & HAL_EPIC_UART_1_MASK)
     {
-        UART_1_IRQHandler(&husart0);
+        UART_1_IRQHandler();
         HAL_EPIC_Clear(HAL_EPIC_UART_1_MASK);
     }
 }

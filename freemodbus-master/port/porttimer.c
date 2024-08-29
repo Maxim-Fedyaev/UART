@@ -35,6 +35,8 @@ volatile uint16_t counter = 0;
 /* ----------------------- Start implementation -----------------------------*/
 BOOL xMBPortTimersInit(USHORT usTim1Timerout50us)
 {
+    __HAL_PCC_TIMER16_1_CLK_ENABLE();
+
     htimer16_1.Instance = TIMER16_1;
 
     /* Настройка тактирования */
