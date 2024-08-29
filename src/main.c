@@ -1,27 +1,25 @@
 #include "mik32_hal_usart.h"
-#include "mik32_hal_timer16.h"
+#include "mik32_hal_timer32.h"
 #include "port.h"
 #include "mbport.h"
 #include "mb.h"
 #include "user_mb_app.h"
 #include "mik32_hal_gpio.h"
-
+#include "mik32_hal_irq.h"
 
 extern USART_HandleTypeDef husart0;
+extern TIMER32_HandleTypeDef htimer32_0;
 void SystemClock_Config(void);
 extern void UART_1_IRQHandler(void);
-extern void Timer16_1_IRQHandler(void);
-
-//static USHORT usRegInputStart = S_REG_INPUT_START;
-static USHORT usRegInputBuf[S_REG_INPUT_NREGS] = {'M', 'F', 77, 1};
+extern void Timer32_0_IRQHandler(void);
 
 extern unsigned long __TEXT_START__; //это "метка" для обработчика прерываний?!
 volatile void trap_handler(void) //сам обработчик всех прерываний
 {
-    if(HAL_EPIC_GetStatus() & HAL_EPIC_TIMER16_1_MASK)
+    if(HAL_EPIC_GetStatus() & HAL_EPIC_TIMER32_0_MASK)
     {
-        Timer16_1_IRQHandler();
-        HAL_EPIC_Clear(HAL_EPIC_TIMER16_1_MASK);
+        Timer32_0_IRQHandler();
+        HAL_EPIC_Clear(HAL_EPIC_TIMER32_0_MASK);
     }
     if(HAL_EPIC_GetStatus() & HAL_EPIC_UART_1_MASK)
     {
@@ -37,7 +35,7 @@ int main()
     SystemClock_Config();
 
     __HAL_PCC_EPIC_CLK_ENABLE();
-    HAL_EPIC_MaskEdgeSet(HAL_EPIC_UART_1_MASK | HAL_EPIC_TIMER16_1_MASK); 
+    HAL_EPIC_MaskEdgeSet(HAL_EPIC_UART_1_MASK | HAL_EPIC_TIMER32_0_MASK); 
     HAL_IRQ_EnableInterrupts();
 
     volatile eMBErrorCode eStatus;
@@ -47,8 +45,6 @@ int main()
     while (1)
     {
        eStatus = eMBPoll();
-       usRegInputBuf[2]++; 
-
     }
 }
 

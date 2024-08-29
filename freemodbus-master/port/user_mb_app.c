@@ -37,7 +37,7 @@ UCHAR    ucSCoilBuf[S_COIL_NCOILS/8]                  ;
 #endif
 //Slave mode:InputRegister variables
 USHORT   usSRegInStart                                = S_REG_INPUT_START;
-USHORT   usSRegInBuf[S_REG_INPUT_NREGS]               ;
+USHORT   usSRegInBuf[S_REG_INPUT_NREGS] = {'M', 'F', 77, 1}               ;
 //Slave mode:HoldingRegister variables
 USHORT   usSRegHoldStart                              = S_REG_HOLDING_START;
 USHORT   usSRegHoldBuf[S_REG_HOLDING_NREGS]           ;

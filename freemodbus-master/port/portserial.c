@@ -22,7 +22,7 @@
 #include "port.h"
 #include "mik32_hal_usart.h"
 #include "mik32_hal_irq.h"
-#include "mik32_hal_timer16.h"
+#include "mik32_hal_timer32.h"
 
 /* ----------------------- Modbus includes ----------------------------------*/
 #include "mb.h"
@@ -30,7 +30,7 @@
 
 /* ----------------------- Static variables ---------------------------------*/
 USART_HandleTypeDef husart0;
-extern Timer16_HandleTypeDef htimer16_1;
+extern TIMER32_HandleTypeDef htimer32_0;
 /* ----------------------- static functions ---------------------------------*/
 static void prvvUARTTxReadyISR(void);
 static void prvvUARTRxISR(void);
@@ -167,9 +167,7 @@ void UART_1_IRQHandler()
     /* UART in mode Receiver ---------------------------------------------------*/
     if((HAL_USART_RXNE_ReadFlag(&husart0) != 0) && ((UART_1->CONTROL1 & (1<<5)) != 0))
     { 
-        HAL_Timer16_Disable(&htimer16_1);
-        HAL_Timer16_Enable(&htimer16_1);
-        __HAL_TIMER16_START_CONTINUOUS(&htimer16_1);
+        HAL_TIMER32_VALUE_CLEAR(&htimer32_0);
         prvvUARTRxISR(  ); 
     }    
 }
