@@ -1,42 +1,7 @@
-/*
- * FreeModbus Libary: A portable Modbus implementation for Modbus ASCII/RTU.
- * Copyright (c) 2006-2018 Christian Walter <cwalter@embedded-solutions.at>
- * All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in the
- *    documentation and/or other materials provided with the distribution.
- * 3. The name of the author may not be used to endorse or promote products
- *    derived from this software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
- * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
- * OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
- * IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT,
- * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
- * NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
- * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
- * File: $Id: mbconfig.h,v 1.14 2006/12/07 22:10:34 wolti Exp $
- *       $Id: mbconfig.h,v 1.60 2013/08/13 21:19:55 Armink Add Master Functions $
- */
 
 #ifndef _MB_CONFIG_H
 #define _MB_CONFIG_H
 
-
-
-#ifdef __cplusplus
-PR_BEGIN_EXTERN_C
-#endif
 /* ----------------------- Defines ------------------------------------------*/
 /*! \defgroup modbus_cfg Modbus Configuration
  *
@@ -50,27 +15,13 @@ PR_BEGIN_EXTERN_C
 /*! \addtogroup modbus_cfg
  *  @{
  */
-/*! \brief If Modbus Master ASCII support is enabled. */
-#define MB_MASTER_ASCII_ENABLED                 (  0 )
 /*! \brief If Modbus Master RTU support is enabled. */
-#define MB_MASTER_RTU_ENABLED                   (  0 )
-/*! \brief If Modbus Master TCP support is enabled. */
-#define MB_MASTER_TCP_ENABLED                   (  0 )
+#define MB_MASTER_RTU_ENABLED                   (  1 )
 
-/*! \brief If Modbus Slave ASCII support is enabled. */
-#define MB_SLAVE_ASCII_ENABLED                  (  0 )
+
 /*! \brief If Modbus Slave RTU support is enabled. */
-#define MB_SLAVE_RTU_ENABLED                    (  1 )
-/*! \brief If Modbus Slave TCP support is enabled. */
-#define MB_SLAVE_TCP_ENABLED                    (  0 )
+#define MB_SLAVE_RTU_ENABLED                    (  0 )
 
-/*! \brief The character timeout value for Modbus ASCII.
- *
- * The character timeout value is not fixed for Modbus ASCII and is therefore
- * a configuration option. It should be set to the maximum expected delay
- * time of the network.
- */
-#define MB_ASCII_TIMEOUT_SEC                    (  1 )
 /*! \brief Maximum number of Modbus functions codes the protocol stack
  *    should support.
  *
@@ -109,11 +60,8 @@ PR_BEGIN_EXTERN_C
 /*! \brief If the <em>Read/Write Multiple Registers</em> function should be enabled. */
 #define MB_FUNC_READWRITE_HOLDING_ENABLED       (  1 )
 /*! @} */
-#ifdef __cplusplus
-    PR_END_EXTERN_C
-#endif
 
-#if MB_MASTER_RTU_ENABLED > 0 || MB_MASTER_ASCII_ENABLED > 0
+#if MB_MASTER_RTU_ENABLED > 0
 /*! \brief If master send a broadcast frame,the master will wait time of convert to delay,
  * then master can send other frame */
 #define MB_MASTER_DELAY_MS_CONVERT              (200 )

@@ -1,37 +1,8 @@
-/*
- * FreeModbus Libary: A portable Modbus implementation for Modbus ASCII/RTU.
- * Copyright (c) 2006-2018 Christian Walter <cwalter@embedded-solutions.at>
- * All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in the
- *    documentation and/or other materials provided with the distribution.
- * 3. The name of the author may not be used to endorse or promote products
- *    derived from this software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
- * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
- * OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
- * IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT,
- * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
- * NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
- * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
- * File: $Id: mbcrc.c,v 1.7 2007/02/18 23:50:27 wolti Exp $
- */
 
 /* ----------------------- Platform includes --------------------------------*/
 #include "port.h"
 
-static const UCHAR aucCRCHi[] = {
+static const uint8_t aucCRCHi[] = {
     0x00, 0xC1, 0x81, 0x40, 0x01, 0xC0, 0x80, 0x41, 0x01, 0xC0, 0x80, 0x41,
     0x00, 0xC1, 0x81, 0x40, 0x01, 0xC0, 0x80, 0x41, 0x00, 0xC1, 0x81, 0x40,
     0x00, 0xC1, 0x81, 0x40, 0x01, 0xC0, 0x80, 0x41, 0x01, 0xC0, 0x80, 0x41,
@@ -56,7 +27,7 @@ static const UCHAR aucCRCHi[] = {
     0x00, 0xC1, 0x81, 0x40
 };
 
-static const UCHAR aucCRCLo[] = {
+static const uint8_t aucCRCLo[] = {
     0x00, 0xC0, 0xC1, 0x01, 0xC3, 0x03, 0x02, 0xC2, 0xC6, 0x06, 0x07, 0xC7,
     0x05, 0xC5, 0xC4, 0x04, 0xCC, 0x0C, 0x0D, 0xCD, 0x0F, 0xCF, 0xCE, 0x0E,
     0x0A, 0xCA, 0xCB, 0x0B, 0xC9, 0x09, 0x08, 0xC8, 0xD8, 0x18, 0x19, 0xD9,
@@ -81,18 +52,18 @@ static const UCHAR aucCRCLo[] = {
     0x41, 0x81, 0x80, 0x40
 };
 
-USHORT
-usMBCRC16( UCHAR * pucFrame, USHORT usLen )
+uint16_t
+usMBCRC16( uint8_t * pucFrame, uint16_t usLen )
 {
-    UCHAR           ucCRCHi = 0xFF;
-    UCHAR           ucCRCLo = 0xFF;
+    uint8_t           ucCRCHi = 0xFF;
+    uint8_t           ucCRCLo = 0xFF;
     int             iIndex;
 
     while( usLen-- )
     {
         iIndex = ucCRCLo ^ *( pucFrame++ );
-        ucCRCLo = ( UCHAR )( ucCRCHi ^ aucCRCHi[iIndex] );
+        ucCRCLo = ( uint8_t )( ucCRCHi ^ aucCRCHi[iIndex] );
         ucCRCHi = aucCRCLo[iIndex];
     }
-    return ( USHORT )( ucCRCHi << 8 | ucCRCLo );
+    return ( uint16_t )( ucCRCHi << 8 | ucCRCLo );
 }

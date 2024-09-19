@@ -1,23 +1,26 @@
 
 #include "mbconfig.h"
 
-#if MB_SLAVE_RTU_ENABLED > 0
+#if MB_MASTER_RTU_ENABLED > 0
 /* ----------------------- Platform includes --------------------------------*/
 #include "mik32_hal_timer32.h"
 
 /* ----------------------- Modbus includes ----------------------------------*/
-#include "mb.h"
-#include "port.h"
+#include "mb_m.h"
+#include "mbport.h"
 
-/* ----------------------- static functions ---------------------------------*/
+/* ----------------------- Variables ----------------------------------------*/
 static void prvvTIMERExpiredISR(void);
 TIMER32_HandleTypeDef htimer32;
 
+/* ----------------------- static functions ---------------------------------*/
+static void prvvTIMERExpiredISR(void);
+
 /* ----------------------- Start implementation -----------------------------*/
-uint8_t xMBPortTimersInit(uint16_t usTim1Timerout50us)
+uint8_t xMBMasterPortTimersInit(uint16_t usTimeOut50us)
 {
     htimer32.Instance = TIMER32_0;
-    htimer32.Top = 25*usTim1Timerout50us;
+    htimer32.Top = 25*usTimeOut50us;
     htimer32.State = TIMER32_STATE_DISABLE;
     htimer32.Clock.Source = TIMER32_SOURCE_PRESCALER;
     htimer32.Clock.Prescaler = 63;
@@ -27,19 +30,29 @@ uint8_t xMBPortTimersInit(uint16_t usTim1Timerout50us)
     return TRUE;
 }
 
-void vMBPortTimersEnable()
+void vMBMasterPortTimersT35Enable()
 {
     HAL_Timer32_Base_Start_IT(&htimer32);
 }
 
-void vMBPortTimersDisable()
+void vMBMasterPortTimersConvertDelayEnable()
+{
+
+}
+
+void vMBMasterPortTimersRespondTimeoutEnable()
+{
+
+}
+
+void vMBMasterPortTimersDisable()
 {
     HAL_Timer32_Base_Stop_IT(&htimer32);
 }
 
 void prvvTIMERExpiredISR(void)
 {
-    (void) pxMBPortCBTimerExpired();
+    (void) pxMBMasterPortCBTimerExpired();
 }
 
 void Timer32_IRQHandler(void)

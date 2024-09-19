@@ -1,31 +1,3 @@
-/*
- * FreeModbus Libary: A portable Modbus implementation for Modbus ASCII/RTU.
- * Copyright (c) 2006-2018 Christian Walter <cwalter@embedded-solutions.at>
- * All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in the
- *    documentation and/or other materials provided with the distribution.
- * 3. The name of the author may not be used to endorse or promote products
- *    derived from this software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
- * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
- * OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
- * IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT,
- * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
- * NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
- * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
- */
 
 /* ----------------------- System includes ----------------------------------*/
 #include "stdlib.h"
@@ -54,24 +26,24 @@ eMBException    prveMBError2Exception( eMBErrorCode eErrorCode );
 #if MB_FUNC_READ_COILS_ENABLED > 0
 
 eMBException
-eMBFuncReadDiscreteInputs( UCHAR * pucFrame, USHORT * usLen )
+eMBFuncReadDiscreteInputs( uint8_t * pucFrame, uint16_t * usLen )
 {
-    USHORT          usRegAddress;
-    USHORT          usDiscreteCnt;
-    UCHAR           ucNBytes;
-    UCHAR          *pucFrameCur;
+    uint16_t          usRegAddress;
+    uint16_t          usDiscreteCnt;
+    uint8_t           ucNBytes;
+    uint8_t          *pucFrameCur;
 
     eMBException    eStatus = MB_EX_NONE;
     eMBErrorCode    eRegStatus;
 
     if( *usLen == ( MB_PDU_FUNC_READ_SIZE + MB_PDU_SIZE_MIN ) )
     {
-        usRegAddress = ( USHORT )( pucFrame[MB_PDU_FUNC_READ_ADDR_OFF] << 8 );
-        usRegAddress |= ( USHORT )( pucFrame[MB_PDU_FUNC_READ_ADDR_OFF + 1] );
+        usRegAddress = ( uint16_t )( pucFrame[MB_PDU_FUNC_READ_ADDR_OFF] << 8 );
+        usRegAddress |= ( uint16_t )( pucFrame[MB_PDU_FUNC_READ_ADDR_OFF + 1] );
         usRegAddress++;
 
-        usDiscreteCnt = ( USHORT )( pucFrame[MB_PDU_FUNC_READ_DISCCNT_OFF] << 8 );
-        usDiscreteCnt |= ( USHORT )( pucFrame[MB_PDU_FUNC_READ_DISCCNT_OFF + 1] );
+        usDiscreteCnt = ( uint16_t )( pucFrame[MB_PDU_FUNC_READ_DISCCNT_OFF] << 8 );
+        usDiscreteCnt |= ( uint16_t )( pucFrame[MB_PDU_FUNC_READ_DISCCNT_OFF + 1] );
 
         /* Check if the number of registers to read is valid. If not
          * return Modbus illegal data value exception.
@@ -91,11 +63,11 @@ eMBFuncReadDiscreteInputs( UCHAR * pucFrame, USHORT * usLen )
              * byte is only partially field with unused coils set to zero. */
             if( ( usDiscreteCnt & 0x0007 ) != 0 )
             {
-                ucNBytes = ( UCHAR ) ( usDiscreteCnt / 8 + 1 );
+                ucNBytes = ( uint8_t ) ( usDiscreteCnt / 8 + 1 );
             }
             else
             {
-                ucNBytes = ( UCHAR ) ( usDiscreteCnt / 8 );
+                ucNBytes = ( uint8_t ) ( usDiscreteCnt / 8 );
             }
             *pucFrameCur++ = ucNBytes;
             *usLen += 1;

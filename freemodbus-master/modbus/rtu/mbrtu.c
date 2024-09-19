@@ -1,32 +1,3 @@
-/*
- * FreeModbus Libary: A portable Modbus implementation for Modbus ASCII/RTU.
- * Copyright (c) 2006-2018 Christian Walter <cwalter@embedded-solutions.at>
- * All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in the
- *    documentation and/or other materials provided with the distribution.
- * 3. The name of the author may not be used to endorse or promote products
- *    derived from this software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
- * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
- * OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
- * IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT,
- * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
- * NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
- * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
- * File: $Id: mbrtu.c,v 1.18 2007/09/12 10:15:56 wolti Exp $
- */
 
 /* ----------------------- System includes ----------------------------------*/
 #include "stdlib.h"
@@ -42,8 +13,8 @@
 
 #include "mbcrc.h"
 #include "mbport.h"
+#include "hdlcbitstaffing.h"
 
-#include "mik32_hal_usart.h"
 /* ----------------------- Defines ------------------------------------------*/
 #define MB_SER_PDU_SIZE_MIN     4       /*!< Minimum size of a Modbus RTU frame. */
 #define MB_SER_PDU_SIZE_MAX     256     /*!< Maximum size of a Modbus RTU frame. */
@@ -70,19 +41,19 @@ typedef enum
 static volatile eMBSndState eSndState;
 static volatile eMBRcvState eRcvState;
 
-volatile UCHAR  ucRTUBuf[MB_SER_PDU_SIZE_MAX];
+volatile uint8_t  ucRTUBuf[MB_SER_PDU_SIZE_MAX];
 
-static volatile UCHAR *pucSndBufferCur;
-static volatile USHORT usSndBufferCount;
+static volatile uint8_t *pucSndBufferCur;
+static volatile uint16_t usSndBufferCount;
 
-static volatile USHORT usRcvBufferPos;
+static volatile uint16_t usRcvBufferPos;
 
 /* ----------------------- Start implementation -----------------------------*/
 eMBErrorCode
-eMBRTUInit( UCHAR ucSlaveAddress, UCHAR ucPort, ULONG ulBaudRate, eMBParity eParity )
+eMBRTUInit( uint8_t ucSlaveAddress, uint8_t ucPort, uint32_t ulBaudRate, eMBParity eParity )
 {
     eMBErrorCode    eStatus = MB_ENOERR;
-    ULONG           usTimerT35_50us;
+    uint32_t           usTimerT35_50us;
 
     ( void )ucSlaveAddress;
     ENTER_CRITICAL_SECTION(  );
@@ -108,7 +79,7 @@ eMBRTUInit( UCHAR ucSlaveAddress, UCHAR ucPort, ULONG ulBaudRate, eMBParity ePar
             usTimerT35_50us = ( 7UL * 220000UL ) / ( 2UL * ulBaudRate );
     }
 
-    if( xMBPortTimersInit( ( USHORT ) usTimerT35_50us ) != TRUE )
+    if( xMBPortTimersInit( ( uint16_t ) usTimerT35_50us ) != TRUE )
     {
             eStatus = MB_EPORTERR;
     }
@@ -133,7 +104,6 @@ eMBRTUStart( void )
     eRcvState = STATE_RX_INIT;
     vMBPortSerialEnable( TRUE, FALSE );
     vMBPortTimersEnable(  );
-
     EXIT_CRITICAL_SECTION(  );
 }
 
@@ -147,16 +117,19 @@ eMBRTUStop( void )
 }
 
 eMBErrorCode
-eMBRTUReceive( UCHAR * pucRcvAddress, UCHAR ** pucFrame, USHORT * pusLength )
+eMBRTUReceive( uint8_t * pucRcvAddress, uint8_t ** pucFrame, uint16_t * pusLength )
 {
     eMBErrorCode    eStatus = MB_ENOERR;
 
     ENTER_CRITICAL_SECTION(  );
-    assert( usRcvBufferPos <= MB_SER_PDU_SIZE_MAX );
+
+    #if HDLC > 0
+        eStatus = Decoder (ucRTUBuf, &usRcvBufferPos, ucRTUBuf);
+    #endif
 
     /* Length and CRC check */
     if( ( usRcvBufferPos >= MB_SER_PDU_SIZE_MIN )
-        && ( usMBCRC16( ( UCHAR * ) ucRTUBuf, usRcvBufferPos ) == 0 ) )
+        && ( usMBCRC16( ( uint8_t * ) ucRTUBuf, usRcvBufferPos ) == 0 ) )
     {
         /* Save the address field. All frames are passed to the upper layed
          * and the decision if a frame is used is done there.
@@ -166,10 +139,10 @@ eMBRTUReceive( UCHAR * pucRcvAddress, UCHAR ** pucFrame, USHORT * pusLength )
         /* Total length of Modbus-PDU is Modbus-Serial-Line-PDU minus
          * size of address field and CRC checksum.
          */
-        *pusLength = ( USHORT )( usRcvBufferPos - MB_SER_PDU_PDU_OFF - MB_SER_PDU_SIZE_CRC );
+        *pusLength = ( uint16_t )( usRcvBufferPos - MB_SER_PDU_PDU_OFF - MB_SER_PDU_SIZE_CRC );
 
         /* Return the start of the Modbus PDU to the caller. */
-        *pucFrame = ( UCHAR * ) & ucRTUBuf[MB_SER_PDU_PDU_OFF];
+        *pucFrame = ( uint8_t * ) & ucRTUBuf[MB_SER_PDU_PDU_OFF];
     }
     else
     {
@@ -181,10 +154,10 @@ eMBRTUReceive( UCHAR * pucRcvAddress, UCHAR ** pucFrame, USHORT * pusLength )
 }
 
 eMBErrorCode
-eMBRTUSend( UCHAR ucSlaveAddress, const UCHAR * pucFrame, USHORT usLength )
+eMBRTUSend( uint8_t ucSlaveAddress, const uint8_t * pucFrame, uint16_t usLength )
 {
     eMBErrorCode    eStatus = MB_ENOERR;
-    USHORT          usCRC16;
+    uint16_t          usCRC16;
 
     ENTER_CRITICAL_SECTION(  );
 
@@ -195,7 +168,7 @@ eMBRTUSend( UCHAR ucSlaveAddress, const UCHAR * pucFrame, USHORT usLength )
     if( eRcvState == STATE_RX_IDLE )
     {
         /* First byte before the Modbus-PDU is the slave address. */
-        pucSndBufferCur = ( UCHAR * ) pucFrame - 1;
+        pucSndBufferCur = ( uint8_t * ) pucFrame - 1;
         usSndBufferCount = 1;
 
         /* Now copy the Modbus-PDU into the Modbus-Serial-Line-PDU. */
@@ -203,9 +176,13 @@ eMBRTUSend( UCHAR ucSlaveAddress, const UCHAR * pucFrame, USHORT usLength )
         usSndBufferCount += usLength;
 
         /* Calculate CRC16 checksum for Modbus-Serial-Line-PDU. */
-        usCRC16 = usMBCRC16( ( UCHAR * ) pucSndBufferCur, usSndBufferCount );
-        ucRTUBuf[usSndBufferCount++] = ( UCHAR )( usCRC16 & 0xFF );
-        ucRTUBuf[usSndBufferCount++] = ( UCHAR )( usCRC16 >> 8 );
+        usCRC16 = usMBCRC16( ( uint8_t * ) pucSndBufferCur, usSndBufferCount );
+        ucRTUBuf[usSndBufferCount++] = ( uint8_t )( usCRC16 & 0xFF );
+        ucRTUBuf[usSndBufferCount++] = ( uint8_t )( usCRC16 >> 8 );
+
+        #if HDLC > 0
+            usSndBufferCount = Coder (ucRTUBuf, usSndBufferCount, ucRTUBuf);
+        #endif
 
         /* Activate the transmitter. */
         eSndState = STATE_TX_XMIT;
@@ -219,16 +196,14 @@ eMBRTUSend( UCHAR ucSlaveAddress, const UCHAR * pucFrame, USHORT usLength )
     return eStatus;
 }
 
-BOOL
+uint8_t
 xMBRTUReceiveFSM( void )
 {
-    BOOL            xTaskNeedSwitch = FALSE;
-    UCHAR           ucByte;
-
-    assert( eSndState == STATE_TX_IDLE );
+    uint8_t            xTaskNeedSwitch = FALSE;
+    uint8_t           ucByte;
 
     /* Always read the character. */
-    ( void )xMBPortSerialGetByte( ( CHAR * ) & ucByte );
+    ( void )xMBPortSerialGetByte( ( int8_t * ) & ucByte );
 
     switch ( eRcvState )
     {
@@ -279,12 +254,10 @@ xMBRTUReceiveFSM( void )
     return xTaskNeedSwitch;
 }
 
-BOOL
+uint8_t
 xMBRTUTransmitFSM( void )
 {
-    BOOL            xNeedPoll = FALSE;
-
-    assert( eRcvState == STATE_RX_IDLE );
+    uint8_t            xNeedPoll = FALSE;
 
     switch ( eSndState )
     {
@@ -299,7 +272,7 @@ xMBRTUTransmitFSM( void )
         /* check if we are finished. */
         if( usSndBufferCount != 0 )
         {
-            xMBPortSerialPutByte( ( CHAR )*pucSndBufferCur );
+            xMBPortSerialPutByte( ( uint8_t )*pucSndBufferCur );
             pucSndBufferCur++;  /* next byte in sendbuffer. */
             usSndBufferCount--;
         }
@@ -317,10 +290,10 @@ xMBRTUTransmitFSM( void )
     return xNeedPoll;
 }
 
-BOOL
+uint8_t
 xMBRTUTimerT35Expired( void )
 {
-    BOOL            xNeedPoll = FALSE;
+    uint8_t            xNeedPoll = FALSE;
 
     switch ( eRcvState )
     {
@@ -341,8 +314,6 @@ xMBRTUTimerT35Expired( void )
 
         /* Function called in an illegal state. */
     default:
-        assert( ( eRcvState == STATE_RX_INIT ) ||
-                ( eRcvState == STATE_RX_RCV ) || ( eRcvState == STATE_RX_ERROR ) );
          break;
     }
 

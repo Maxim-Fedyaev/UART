@@ -1,32 +1,3 @@
-/*
- * FreeModbus Libary: A portable Modbus implementation for Modbus ASCII/RTU.
- * Copyright (c) 2006-2018 Christian Walter <cwalter@embedded-solutions.at>
- * All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in the
- *    documentation and/or other materials provided with the distribution.
- * 3. The name of the author may not be used to endorse or promote products
- *    derived from this software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
- * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
- * OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
- * IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT,
- * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
- * NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
- * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
- * File: $Id: mb.c,v 1.27 2007/02/18 23:45:41 wolti Exp $
- */
 
 /* ----------------------- System includes ----------------------------------*/
 #include "stdlib.h"
@@ -36,7 +7,6 @@
 #include "port.h"
 
 /* ----------------------- Modbus includes ----------------------------------*/
-
 #include "mb.h"
 #include "mbconfig.h"
 #include "mbframe.h"
@@ -44,15 +14,9 @@
 #include "mbfunc.h"
 
 #include "mbport.h"
-#if MB_SLAVE_RTU_ENABLED == 1
+
 #include "mbrtu.h"
-#endif
-#if MB_SLAVE_ASCII_ENABLED == 1
-#include "mbascii.h"
-#endif
-#if MB_SLAVE_TCP_ENABLED == 1
-#include "mbtcp.h"
-#endif
+
 
 #ifndef MB_PORT_HAS_CLOSE
 #define MB_PORT_HAS_CLOSE 0
@@ -60,8 +24,7 @@
 
 /* ----------------------- Static variables ---------------------------------*/
 
-static UCHAR    ucMBAddress;
-static eMBMode  eMBCurrentMode;
+static uint8_t    ucMBAddress;
 
 static enum
 {
@@ -85,12 +48,12 @@ static pvMBFrameClose pvMBFrameCloseCur;
  * or transmission of a character.
  * Using for Modbus Slave
  */
-BOOL( *pxMBFrameCBByteReceived ) ( void );
-BOOL( *pxMBFrameCBTransmitterEmpty ) ( void );
-BOOL( *pxMBPortCBTimerExpired ) ( void );
+uint8_t( *pxMBFrameCBByteReceived ) ( void );
+uint8_t( *pxMBFrameCBTransmitterEmpty ) ( void );
+uint8_t( *pxMBPortCBTimerExpired ) ( void );
 
-BOOL( *pxMBFrameCBReceiveFSMCur ) ( void );
-BOOL( *pxMBFrameCBTransmitFSMCur ) ( void );
+uint8_t( *pxMBFrameCBReceiveFSMCur ) ( void );
+uint8_t( *pxMBFrameCBTransmitFSMCur ) ( void );
 
 /* An array of Modbus functions handlers which associates Modbus function
  * codes with implementing functions.
@@ -130,7 +93,7 @@ static xMBFunctionHandler xFuncHandlers[MB_FUNC_HANDLERS_MAX] = {
 
 /* ----------------------- Start implementation -----------------------------*/
 eMBErrorCode
-eMBInit( eMBMode eMode, UCHAR ucSlaveAddress, UCHAR ucPort, ULONG ulBaudRate, eMBParity eParity )
+eMBInit( uint8_t ucSlaveAddress, uint8_t ucPort, uint32_t ulBaudRate, eMBParity eParity )
 {
     eMBErrorCode    eStatus = MB_ENOERR;
 
@@ -144,10 +107,7 @@ eMBInit( eMBMode eMode, UCHAR ucSlaveAddress, UCHAR ucPort, ULONG ulBaudRate, eM
     {
         ucMBAddress = ucSlaveAddress;
 
-        switch ( eMode )
-        {
 #if MB_SLAVE_RTU_ENABLED > 0
-        case MB_RTU:
             pvMBFrameStartCur = eMBRTUStart;
             pvMBFrameStopCur = eMBRTUStop;
             peMBFrameSendCur = eMBRTUSend;
@@ -158,25 +118,7 @@ eMBInit( eMBMode eMode, UCHAR ucSlaveAddress, UCHAR ucPort, ULONG ulBaudRate, eM
             pxMBPortCBTimerExpired = xMBRTUTimerT35Expired;
 
             eStatus = eMBRTUInit( ucMBAddress, ucPort, ulBaudRate, eParity );
-            break;
 #endif
-#if MB_SLAVE_ASCII_ENABLED > 0
-        case MB_ASCII:
-            pvMBFrameStartCur = eMBASCIIStart;
-            pvMBFrameStopCur = eMBASCIIStop;
-            peMBFrameSendCur = eMBASCIISend;
-            peMBFrameReceiveCur = eMBASCIIReceive;
-            pvMBFrameCloseCur = MB_PORT_HAS_CLOSE ? vMBPortClose : NULL;
-            pxMBFrameCBByteReceived = xMBASCIIReceiveFSM;
-            pxMBFrameCBTransmitterEmpty = xMBASCIITransmitFSM;
-            pxMBPortCBTimerExpired = xMBASCIITimerT1SExpired;
-
-            eStatus = eMBASCIIInit( ucMBAddress, ucPort, ulBaudRate, eParity );
-            break;
-#endif
-        default:
-            eStatus = MB_EINVAL;
-            break;
         }
 
         if( eStatus == MB_ENOERR )
@@ -188,46 +130,14 @@ eMBInit( eMBMode eMode, UCHAR ucSlaveAddress, UCHAR ucPort, ULONG ulBaudRate, eM
             }
             else
             {
-                eMBCurrentMode = eMode;
                 eMBState = STATE_DISABLED;
             }
         }
-    }
     return eStatus;
 }
 
-#if MB_SLAVE_TCP_ENABLED > 0
 eMBErrorCode
-eMBTCPInit( USHORT ucTCPPort )
-{
-    eMBErrorCode    eStatus = MB_ENOERR;
-
-    if( ( eStatus = eMBTCPDoInit( ucTCPPort ) ) != MB_ENOERR )
-    {
-        eMBState = STATE_DISABLED;
-    }
-    else if( !xMBPortEventInit(  ) )
-    {
-        /* Port dependent event module initalization failed. */
-        eStatus = MB_EPORTERR;
-    }
-    else
-    {
-        pvMBFrameStartCur = eMBTCPStart;
-        pvMBFrameStopCur = eMBTCPStop;
-        peMBFrameReceiveCur = eMBTCPReceive;
-        peMBFrameSendCur = eMBTCPSend;
-        pvMBFrameCloseCur = MB_PORT_HAS_CLOSE ? vMBTCPPortClose : NULL;
-        ucMBAddress = MB_TCP_PSEUDO_ADDRESS;
-        eMBCurrentMode = MB_TCP;
-        eMBState = STATE_DISABLED;
-    }
-    return eStatus;
-}
-#endif
-
-eMBErrorCode
-eMBRegisterCB( UCHAR ucFunctionCode, pxMBFunctionHandler pxHandler )
+eMBRegisterCB( uint8_t ucFunctionCode, pxMBFunctionHandler pxHandler )
 {
     int             i;
     eMBErrorCode    eStatus;
@@ -335,10 +245,10 @@ eMBDisable( void )
 
 eMBErrorCode eMBPoll( void )
 {
-    static UCHAR   *ucMBFrame;
-    static UCHAR    ucRcvAddress;
-    static UCHAR    ucFunctionCode;
-    static USHORT   usLength;
+    static uint8_t   *ucMBFrame;
+    static uint8_t    ucRcvAddress;
+    static uint8_t    ucFunctionCode;
+    static uint16_t   usLength;
     static eMBException eException;
 
     int             i;
@@ -397,7 +307,7 @@ eMBErrorCode eMBPoll( void )
                 {
                     /* An exception occured. Build an error frame. */
                     usLength = 0;
-                    ucMBFrame[usLength++] = ( UCHAR )( ucFunctionCode | MB_FUNC_ERROR );
+                    ucMBFrame[usLength++] = ( uint8_t )( ucFunctionCode | MB_FUNC_ERROR );
                     ucMBFrame[usLength++] = eException;
                 }
                 eStatus = peMBFrameSendCur( ucMBAddress, ucMBFrame, usLength );

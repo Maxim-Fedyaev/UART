@@ -1,6 +1,5 @@
 
 #include "mbconfig.h"
-#include <stdint.h>
 
 #ifndef _MB_RTU_H
 #define _MB_RTU_H

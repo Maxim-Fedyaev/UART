@@ -1,41 +1,25 @@
-/*
- * FreeModbus Libary: MSP430 Port
- * Copyright (C) 2006 Christian Walter <wolti@sil.at>
- *
- * This library is free software; you can redistribute it and/or
- * modify it under the terms of the GNU Lesser General Public
- * License as published by the Free Software Foundation; either
- * version 2.1 of the License, or (at your option) any later version.
- *
- * This library is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- * Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
- *
- * File: $Id$
- */
 
+#include "mbconfig.h"
+
+#if MB_SLAVE_RTU_ENABLED > 0
 /* ----------------------- Modbus includes ----------------------------------*/
 #include "mb.h"
 #include "mbport.h"
+#include "port.h"
 
 /* ----------------------- Variables ----------------------------------------*/
 static eMBEventType eQueuedEvent;
-static BOOL     xEventInQueue;
+static uint8_t     xEventInQueue;
 
 /* ----------------------- Start implementation -----------------------------*/
-BOOL
+uint8_t
 xMBPortEventInit( void )
 {
     xEventInQueue = FALSE;
     return TRUE;
 }
 
-BOOL
+uint8_t
 xMBPortEventPost( eMBEventType eEvent )
 {
     xEventInQueue = TRUE;
@@ -43,10 +27,10 @@ xMBPortEventPost( eMBEventType eEvent )
     return TRUE;
 }
 
-BOOL
+uint8_t
 xMBPortEventGet( eMBEventType * eEvent )
 {
-    BOOL            xEventHappened = FALSE;
+    uint8_t            xEventHappened = FALSE;
 
     if( xEventInQueue )
     {
@@ -56,3 +40,4 @@ xMBPortEventGet( eMBEventType * eEvent )
     }
     return xEventHappened;
 }
+#endif

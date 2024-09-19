@@ -8,6 +8,7 @@
 #include "port.h"
 #include "mbport.h"
 #include "mb.h"
+#include "mb_m.h"
 #include "user_mb_app.h"
 
 /* -------------------------- Defines ---------------------------------------*/
@@ -16,8 +17,7 @@
 #define TIMER32_EPIC_MASK   HAL_EPIC_TIMER32_0_MASK
 
 // Настройки Modbus
-#define MB_SlaveAddress     0x11
-#define MB_BaudRate         38400
+#define MB_BaudRate         14400
 #define MB_UART             1
 
 /* ------------------------ Fuction -----------------------------------------*/
@@ -50,14 +50,26 @@ int main()
     __HAL_PCC_EPIC_CLK_ENABLE();
     HAL_EPIC_MaskEdgeSet(UART_EPIC_MASK | TIMER32_EPIC_MASK); 
     HAL_IRQ_EnableInterrupts();
-
-    eMBInit(MB_RTU, MB_SlaveAddress, MB_UART, MB_BaudRate, MB_PAR_NONE);
+#if MB_SLAVE_RTU_ENABLED
+    eMBInit(MB_SlaveAddress, MB_UART, MB_BaudRate, MB_PAR_NONE);
     eMBEnable();
 
     while (1)
     {
        eMBPoll();
     }
+#endif
+#if MB_MASTER_RTU_ENABLED   
+    eMBMasterInit(MB_UART, MB_BaudRate, MB_PAR_NONE);
+    eMBMasterEnable();
+
+    while (1)
+    {
+        eMBMasterPoll();
+        eMBMasterReqWriteHoldingRegister(MB_SlaveAddress, 0x1234, 0x5678, 1000);
+        HAL_DelayMs(1000);
+    }
+#endif
 }
 
 /* ----------------------- Инициализация тактирования -------------------------*/

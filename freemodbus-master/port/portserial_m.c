@@ -1,27 +1,30 @@
 
 #include "mbconfig.h"
 
-#if MB_SLAVE_RTU_ENABLED > 0
+#if MB_MASTER_RTU_ENABLED > 0
 /* ----------------------- Platform includes --------------------------------*/
 #include "mik32_hal_usart.h"
 #include "mik32_hal_irq.h"
 #include "mik32_hal_timer32.h"
 
 /* ----------------------- Modbus includes ----------------------------------*/
-#include "mb.h"
+#include "mb_m.h"
 #include "mbport.h"
 #include "port.h"
 
-/* ----------------------- Declaration --------------------------------------*/
+/* ----------------------- Static variables ---------------------------------*/
 USART_HandleTypeDef husart;
 extern TIMER32_HandleTypeDef htimer32;
 
-/* ----------------------- Static functions ---------------------------------*/
+/* ----------------------- Defines ------------------------------------------*/
+
+
+/* ----------------------- static functions ---------------------------------*/
 static void prvvUARTTxReadyISR(void);
 static void prvvUARTRxISR(void);
 
 /* ----------------------- Start implementation -----------------------------*/
-uint8_t xMBPortSerialInit(uint8_t ucPORT, uint32_t ulBaudRate, uint8_t ucDataBits,
+uint8_t xMBMasterPortSerialInit(uint8_t ucPORT, uint32_t ulBaudRate, uint8_t ucDataBits,
         eMBParity eParity)
 {
     // выбор UART
@@ -72,7 +75,7 @@ uint8_t xMBPortSerialInit(uint8_t ucPORT, uint32_t ulBaudRate, uint8_t ucDataBit
     return TRUE;
 }
 
-void vMBPortSerialEnable(uint8_t xRxEnable, uint8_t xTxEnable)
+void vMBMasterPortSerialEnable(uint8_t xRxEnable, uint8_t xTxEnable)
 {
     if (xRxEnable)
     {
@@ -96,13 +99,13 @@ void vMBPortSerialEnable(uint8_t xRxEnable, uint8_t xTxEnable)
     }
 }
 
-uint8_t xMBPortSerialPutByte(int8_t ucByte)
+uint8_t xMBMasterPortSerialPutByte(int8_t ucByte)
 {
     husart.Instance->TXDATA = ucByte;
     return TRUE;
 }
 
-uint8_t xMBPortSerialGetByte(int8_t * pucByte)
+uint8_t xMBMasterPortSerialGetByte(int8_t * pucByte)
 {
     *pucByte = husart.Instance->RXDATA;
     return TRUE;
@@ -117,7 +120,7 @@ uint8_t xMBPortSerialGetByte(int8_t * pucByte)
  */
 void prvvUARTTxReadyISR(void)
 {
-    pxMBFrameCBTransmitterEmpty();
+    pxMBMasterFrameCBTransmitterEmpty();
 }
 
 /*
@@ -128,7 +131,7 @@ void prvvUARTTxReadyISR(void)
  */
 void prvvUARTRxISR(void)
 {
-    pxMBFrameCBByteReceived();
+    pxMBMasterFrameCBByteReceived();
 }
 
 void UART_IRQHandler() //подпрограама обработки прерываний от UART
