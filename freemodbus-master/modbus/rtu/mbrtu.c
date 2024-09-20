@@ -15,6 +15,9 @@
 #include "mbport.h"
 #include "hdlcbitstaffing.h"
 
+extern void SetKey(uint8_t* key);
+extern uint8_t crypto_key[32];
+
 /* ----------------------- Defines ------------------------------------------*/
 #define MB_SER_PDU_SIZE_MIN     4       /*!< Minimum size of a Modbus RTU frame. */
 #define MB_SER_PDU_SIZE_MAX     256     /*!< Maximum size of a Modbus RTU frame. */
@@ -86,7 +89,10 @@ eMBRTUInit( uint8_t ucSlaveAddress, uint8_t ucPort, uint32_t ulBaudRate, eMBPari
     else if( xMBPortSerialInit( ucPort, ulBaudRate, 8, eParity ) != TRUE )
     {
         eStatus = MB_EPORTERR;
-    }	
+    }
+    #if KUZNECHIK > 0
+        SetKey(crypto_key);;
+    #endif	
     EXIT_CRITICAL_SECTION(  );
 
     return eStatus;

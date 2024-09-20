@@ -16,11 +16,11 @@
  *  @{
  */
 /*! \brief If Modbus Master RTU support is enabled. */
-#define MB_MASTER_RTU_ENABLED                   (  1 )
+#define MB_MASTER_RTU_ENABLED                   (  0 )
 
 
 /*! \brief If Modbus Slave RTU support is enabled. */
-#define MB_SLAVE_RTU_ENABLED                    (  0 )
+#define MB_SLAVE_RTU_ENABLED                    (  1 )
 
 /*! \brief Maximum number of Modbus functions codes the protocol stack
  *    should support.

@@ -17,7 +17,7 @@
 #define TIMER32_EPIC_MASK   HAL_EPIC_TIMER32_0_MASK
 
 // Настройки Modbus
-#define MB_BaudRate         14400
+#define MB_BaudRate         57600
 #define MB_UART             1
 
 /* ------------------------ Fuction -----------------------------------------*/
@@ -65,9 +65,11 @@ int main()
 
     while (1)
     {
+        //eMBMasterReqWriteHoldingRegister(MB_SlaveAddress, 0x1234, 0x5678, 1000);
+        eMBMasterReqReadInputRegister( MB_SlaveAddress, 30000, 4, 1000 );
         eMBMasterPoll();
-        eMBMasterReqWriteHoldingRegister(MB_SlaveAddress, 0x1234, 0x5678, 1000);
-        HAL_DelayMs(1000);
+        HAL_DelayMs(10000);
+        
     }
 #endif
 }

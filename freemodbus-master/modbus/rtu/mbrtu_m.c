@@ -15,6 +15,8 @@
 #include "mbcrc.h"
 #include "mbport.h"
 #include "hdlcbitstaffing.h"
+extern void SetKey(uint8_t* key);
+extern uint8_t crypto_key[32];
 
 #if MB_MASTER_RTU_ENABLED > 0
 /* ----------------------- Defines ------------------------------------------*/
@@ -95,7 +97,11 @@ eMBMasterRTUInit(uint8_t ucPort, uint32_t ulBaudRate, eMBParity eParity )
         {
             eStatus = MB_EPORTERR;
         }
-    }
+    }    
+    #if KUZNECHIK > 0
+        SetKey(crypto_key);;
+    #endif
+
     EXIT_CRITICAL_SECTION(  );
 
     return eStatus;

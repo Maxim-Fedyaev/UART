@@ -130,6 +130,7 @@ eMBErrorCode Decoder (volatile uint8_t* input_buffer, volatile uint16_t* indicat
 {
     eMBErrorCode    eStatus = MB_ENOERR;
     uint8_t HDLC_buffer[*indicator_length_input_buffer];
+    for (uint16_t i = 0; i < *indicator_length_input_buffer; i++) HDLC_buffer[i] = 0;
     eStatus = Res_bitstaffing(input_buffer, *indicator_length_input_buffer, HDLC_buffer);
     if (eStatus == MB_ENOERR)
     {
