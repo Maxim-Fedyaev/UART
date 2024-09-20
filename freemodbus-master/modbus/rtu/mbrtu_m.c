@@ -15,10 +15,19 @@
 #include "mbcrc.h"
 #include "mbport.h"
 #include "hdlcbitstaffing.h"
+
+
+
+
+#if MB_MASTER_RTU_ENABLED > 0
+
 extern void SetKey(uint8_t* key);
 extern uint8_t crypto_key[32];
 
-#if MB_MASTER_RTU_ENABLED > 0
+#if HDLC > 0
+uint8_t HDLC_Count = 0;
+#endif
+
 /* ----------------------- Defines ------------------------------------------*/
 #define MB_SER_PDU_SIZE_MIN     4       /*!< Minimum size of a Modbus RTU frame. */
 #define MB_SER_PDU_SIZE_MAX     256     /*!< Maximum size of a Modbus RTU frame. */
@@ -229,14 +238,18 @@ xMBMasterRTUReceiveFSM( void )
          * wait until the frame is finished.
          */
     case STATE_M_RX_INIT:
+        #if HDLC == 0
         vMBMasterPortTimersT35Enable( );
+        #endif
         break;
 
         /* In the error state we wait until all characters in the
          * damaged frame are transmitted.
          */
     case STATE_M_RX_ERROR:
+        #if HDLC == 0
         vMBMasterPortTimersT35Enable( );
+        #endif
         break;
 
         /* In the idle state we wait for a new character. If a character
@@ -265,6 +278,7 @@ xMBMasterRTUReceiveFSM( void )
          * ignored.
          */
     case STATE_M_RX_RCV:
+        #if HDLC == 0
         if( usMasterRcvBufferPos < MB_SER_PDU_SIZE_MAX )
         {
             ucMasterRTURcvBuf[usMasterRcvBufferPos++] = ucByte;
@@ -275,6 +289,33 @@ xMBMasterRTUReceiveFSM( void )
         }
         vMBMasterPortTimersT35Enable();
         break;
+        #else
+        vMBMasterPortTimersT35Enable( );
+
+        if( usMasterRcvBufferPos < MB_SER_PDU_SIZE_MAX )
+        {
+            ucMasterRTURcvBuf[usMasterRcvBufferPos] = ucByte;
+            for (uint8_t i = 7; i >= 0; i--)
+            {
+                if(ucMasterRTURcvBuf[usMasterRcvBufferPos] & (1 << i))
+                    HDLC_Count++;
+                else 
+                    HDLC_Count = 0;
+                if (HDLC_Count >= 6)
+                {
+                    xTaskNeedSwitch = xMBMasterPortEventPost(EV_MASTER_FRAME_RECEIVED);
+                    vMBMasterPortTimersDisable(); 
+                    eRcvState = STATE_M_RX_IDLE;             
+                }  
+            }
+            usMasterRcvBufferPos++;          
+        }
+        else
+        {
+            eRcvState = STATE_M_RX_ERROR;
+        }
+        break;        
+        #endif
     }
     return xTaskNeedSwitch;
 }
@@ -333,6 +374,7 @@ xMBMasterRTUTimerExpired(void)
 {
     uint8_t xNeedPoll = FALSE;
 
+    #if HDLC == 0
     switch (eRcvState)
     {
         /* Timer t35 expired. Startup phase is finished. */
@@ -356,6 +398,13 @@ xMBMasterRTUTimerExpired(void)
     default:
         break;
     }
+    #else 
+    if (eRcvState == STATE_M_RX_INIT)
+    {
+        xNeedPoll = xMBMasterPortEventPost(EV_MASTER_READY);
+    }
+    #endif
+
     eRcvState = STATE_M_RX_IDLE;
 
     switch (eSndState)

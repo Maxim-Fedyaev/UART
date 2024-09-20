@@ -274,11 +274,15 @@ eMBErrorCode eMBPoll( void )
             eStatus = peMBFrameReceiveCur( &ucRcvAddress, &ucMBFrame, &usLength );
             if( eStatus == MB_ENOERR )
             {
+                #if HDLC == 0
                 /* Check if the frame is for us. If not ignore the frame. */
                 if( ( ucRcvAddress == ucMBAddress ) || ( ucRcvAddress == MB_ADDRESS_BROADCAST ) )
                 {
                     ( void )xMBPortEventPost( EV_EXECUTE );
                 }
+                #else 
+                ( void )xMBPortEventPost( EV_EXECUTE );
+                #endif
             }
             break;
 

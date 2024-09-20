@@ -134,23 +134,32 @@ eMBErrorCode Decoder (volatile uint8_t* input_buffer, volatile uint16_t* indicat
     eStatus = Res_bitstaffing(input_buffer, *indicator_length_input_buffer, HDLC_buffer);
     if (eStatus == MB_ENOERR)
     {
+    #if MB_SLAVE_RTU_ENABLED > 0
+    if( ( HDLC_buffer[1] == MB_SlaveAddress ) || ( HDLC_buffer[1] == MB_ADDRESS_BROADCAST ) )
+    #endif
+    {
     #if KUZNECHIK
-        uint16_t Length_HDLC_buffer = 0;    
+        uint16_t Length_descrypt_buffer = 0;    
         for (uint16_t i = 2; i < sizeof(HDLC_buffer)/sizeof(*HDLC_buffer); i++) 
         {
             if (HDLC_buffer[i] != FLAG_FD) 
-                Length_HDLC_buffer++; 
+                Length_descrypt_buffer++; 
             else 
                 break;
         }    
-        uint8_t Decrypt_buffer[Length_HDLC_buffer];
-        for (uint16_t i = 0; i < Length_HDLC_buffer; i++) Decrypt_buffer[i] = HDLC_buffer[i+2];
-        Decrypt(Decrypt_buffer, sizeof(Decrypt_buffer)/sizeof(*Decrypt_buffer));
-        uint16_t i = 0, Length_output_buffer = 0;
-        while (Decrypt_buffer[i] != 0x80 || Decrypt_buffer[i+1] != 0) { Length_output_buffer++; i++; }
-        output_buffer[0] = HDLC_buffer[1];
-        for (uint16_t i = 1; i < Length_output_buffer + 1; i++) output_buffer[i] = Decrypt_buffer[i-1];
-        *indicator_length_input_buffer = Length_output_buffer + 1;                  
+        Decrypt(HDLC_buffer + 2, Length_descrypt_buffer);
+        Length_descrypt_buffer = *indicator_length_input_buffer - 1;
+
+        while ((HDLC_buffer[Length_descrypt_buffer] == 0x80 && HDLC_buffer[Length_descrypt_buffer+1] == FLAG_FD) 
+            || (HDLC_buffer[Length_descrypt_buffer] == 0x80 && HDLC_buffer[Length_descrypt_buffer+1] == 0) 
+            || (HDLC_buffer[Length_descrypt_buffer] == 0 && HDLC_buffer[Length_descrypt_buffer+1] == 0) 
+            || (HDLC_buffer[Length_descrypt_buffer] == 0 && HDLC_buffer[Length_descrypt_buffer+1] == FLAG_FD) 
+            || (HDLC_buffer[Length_descrypt_buffer-1] == FLAG_FD && HDLC_buffer[Length_descrypt_buffer] == 0)
+            || HDLC_buffer[Length_descrypt_buffer] == FLAG_FD) 
+            { Length_descrypt_buffer--; }
+
+        for (uint16_t i = 0; i < Length_descrypt_buffer; i++) output_buffer[i] = HDLC_buffer[i+1];
+        *indicator_length_input_buffer = Length_descrypt_buffer;
     #else 
         uint16_t Length_output_buffer = 0;
         for (uint16_t i = 1; i < sizeof(HDLC_buffer)/sizeof(*HDLC_buffer); i++) 
@@ -163,6 +172,7 @@ eMBErrorCode Decoder (volatile uint8_t* input_buffer, volatile uint16_t* indicat
         for (uint16_t i = 0; i < Length_output_buffer; i++) output_buffer[i] = HDLC_buffer[i+1];  
         *indicator_length_input_buffer = Length_output_buffer;                       
     #endif
+    }
     }
         return eStatus;   
 }

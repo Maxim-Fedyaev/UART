@@ -17,7 +17,7 @@
 #define TIMER32_EPIC_MASK   HAL_EPIC_TIMER32_0_MASK
 
 // Настройки Modbus
-#define MB_BaudRate         57600
+#define MB_BaudRate         9600
 #define MB_UART             1
 
 /* ------------------------ Fuction -----------------------------------------*/
